@@ -1,6 +1,8 @@
+//requires inquirer and mysql
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
 
+//creating connection to mysql and database
 const db = mysql.createConnection({
     host: 'localhost',
     port: 3306,
@@ -8,7 +10,7 @@ const db = mysql.createConnection({
     password: "Wildcats123!",
     database: "employee_tracker_db"
 });
-
+    //Connect to database and starts optionPrompt function
     db.connect((err) => {
         if (err) {
             console.error('Error connecting to the database: ' + err.stack);
@@ -19,7 +21,7 @@ const db = mysql.createConnection({
     optionPrompt();
 });
 
-
+// Function that prompts the user to choose one of the following
 function optionPrompt(){
     inquirer.prompt([
     {
@@ -37,6 +39,7 @@ function optionPrompt(){
             "Exit"
         ]
     }
+    // based on which prompt the user clicks it starts the function that corresponds
     ]).then((res) =>{
         console.log(res.userChoice);
         switch(res.userChoice){
@@ -71,7 +74,9 @@ function optionPrompt(){
     });
 }
 
+// function to view all departments
 function viewAllDepartments(){
+    // selects all departments from database
     let query =
     `SELECT * FROM department`;
 
@@ -81,11 +86,14 @@ function viewAllDepartments(){
             return;
         }
         console.table(rows);
+        //shows the prompt options after completed
         optionPrompt();
     });
 }
 
+// function to view all roles
 function viewAllRoles(){
+    // selects id, title, & salary from role table, then department name from department table & joins it on role table
     let query = `
         SELECT
             role.id,
@@ -106,7 +114,9 @@ function viewAllRoles(){
     });
 }
 
+// function to view all employees
 function viewAllEmployees(){
+    // selects id & name from employee table, then title from role table, then department name from department table, finally salary from role table and adds to employee table
     let query = `
         SELECT
             employee.id,
@@ -132,13 +142,16 @@ function viewAllEmployees(){
     });
 }
 
+// function to add a department
 function addDepartment(){
+    // prompts the user to input the name of the new department
     inquirer.prompt([
         {
             type: "input",
             name: "name",
             message: "What is the name of the department?"
         }
+        // inserts department name into department table
     ]).then((res) => {
         let query =
             `INSERT INTO department SET ?`;
@@ -151,18 +164,20 @@ function addDepartment(){
             });
     });
 }
-
+// function to add a role
 function addRole(){
+    // selects all from department table
     db.query(`SELECT * FROM department`, (err, results) => {
         if(err) {
             console.error('Error querying database');
             return;
         }
+        // only pulls the department name and id in order to show in prompt
         const departmentChoice = results.map(row => ({
             name: row.name,
             value: row.id
         }));
-
+        // prompts user to input the role name and salary, then asks what department the role belongs to
     inquirer.prompt([
         {
             type: "input",
@@ -180,6 +195,8 @@ function addRole(){
             message: "What department does the role belong to?",
             choices: departmentChoice
         }
+
+        // adds role to database
     ]).then((res) => {
         let query = `INSERT INTO role SET ?`;
 
@@ -198,27 +215,32 @@ function addRole(){
     });
 };
 
+// function to add an employee
 function addEmployee(){
+    // selects all from role table
     db.query(`SELECT * FROM role`, (err, results) => {
         if(err) {
             console.error('Error querying database');
             return;
         }
+        // only pulls role title and id in order to show in prompt
         const roleChoices = results.map(row => ({
             name: row.title,
             value: row.id
         }));
-
+    // selects all from employee table
     db.query(`SELECT * FROM employee`, (err, results) => {
         if(err) {
             console.error('Error querying database');
             return;
         }
+        // only pulls the managers and id in order to show in prompt
         const managerChoices = results.map(row => ({
             name: `${row.first_name} ${row.last_name}`,
             value: row.id
         }));
-        
+
+        // prompts user to input employee name, their role, and manager
         inquirer.prompt([
             {
                 type: "input",
@@ -242,6 +264,8 @@ function addEmployee(){
                 message: "Who is the employee's manager?",
                 choices: managerChoices 
             }
+
+            //inserts into database
         ]).then((res) => {
             let query = `INSERT INTO employee SET ?`;
 
@@ -262,6 +286,64 @@ function addEmployee(){
     });
 }
 
+// function to update role
+function updateRole() {
+    //selects all from employee table
+    db.query(`SELECT * FROM employee`, (err, results) => {
+        if(err) {
+            console.error('Error querying database');
+            return;
+        }
+        // pulls only the employee name and id in order to show in prompt
+        const employeeChoices = results.map(row => ({
+            name:`${row.first_name} ${row.last_name}`,
+            value: row.id
+        }));
+    // selects all from role table
+    db.query(`SELECT * FROM role`, (err, results) => {
+        if(err) {
+            console.error('Error querying database');
+            return;
+        }
+        // pulls only role title and id in order to show in prompt
+        const roleList = results.map(row => ({
+            name: row.title,
+            value: row.id
+        }));
+
+        // prompts the user to choose the employee they want to update and then what role they want to reassign to them.
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "employee",
+                message: "What employee's role do you want to update?",
+                choices: employeeChoices
+            },
+            {
+                type: "list",
+                name: "updatedRole",
+                message: "Which role do you want to assign the selected employee?",
+                choices: roleList
+            },
+        // updates database
+        ]).then((answers) => {
+            const employeeId = answers.employee;
+            const newRoleId = answers.updateRole;
+
+            const query = `UPDATE employee SET role_id = ? WHERE id = ?`;
+
+            db.query(query, [newRoleId, employeeId], (err,res) => {
+                if(err) {
+                    console.error('Error updating employee');
+                    return;
+                }
+                optionPrompt();
+            });
+        });
+    });
+});
+}
+       
 
 
 
