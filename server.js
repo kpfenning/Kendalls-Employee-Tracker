@@ -132,6 +132,136 @@ function viewAllEmployees(){
     });
 }
 
+function addDepartment(){
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "name",
+            message: "What is the name of the department?"
+        }
+    ]).then((res) => {
+        let query =
+            `INSERT INTO department SET ?`;
+            db.query(query, {name: res.name},(err, res) => {
+                if(err) {
+                    console.error(err);
+                    return;
+                }
+                optionPrompt();
+            });
+    });
+}
+
+function addRole(){
+    db.query(`SELECT * FROM department`, (err, results) => {
+        if(err) {
+            console.error('Error querying database');
+            return;
+        }
+        const departmentChoice = results.map(row => ({
+            name: row.name,
+            value: row.id
+        }));
+
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "title",
+            message: "What is the name of the role?"
+        },
+        {
+            type: "input",
+            name: "salary",
+            message: "What is the salary of the role?"
+        },
+        {
+            type: "list",
+            name: "department",
+            message: "What department does the role belong to?",
+            choices: departmentChoice
+        }
+    ]).then((res) => {
+        let query = `INSERT INTO role SET ?`;
+
+        db.query(query, {
+            title: res.title,
+            salary: res.salary,
+            department_id: res.department
+        }, (err, res) => {
+            if(err) {
+                console.error(err);
+                return;
+            }
+            optionPrompt();
+        });
+    });
+    });
+};
+
+function addEmployee(){
+    db.query(`SELECT * FROM role`, (err, results) => {
+        if(err) {
+            console.error('Error querying database');
+            return;
+        }
+        const roleChoices = results.map(row => ({
+            name: row.title,
+            value: row.id
+        }));
+
+    db.query(`SELECT * FROM employee`, (err, results) => {
+        if(err) {
+            console.error('Error querying database');
+            return;
+        }
+        const managerChoices = results.map(row => ({
+            name: `${row.first_name} ${row.last_name}`,
+            value: row.id
+        }));
+        
+        inquirer.prompt([
+            {
+                type: "input",
+                name: "first_name",
+                message: "What is the employee's first name?"
+            },
+            {
+                type: "input",
+                name: "last_name",
+                message: "What is the employee's last name?" 
+            },
+            {
+                type: "list",
+                name: "role",
+                message: "What is the employee's role?",
+                choices: roleChoices
+            },
+            {
+                type: "list",
+                name: "manager",
+                message: "Who is the employee's manager?",
+                choices: managerChoices 
+            }
+        ]).then((res) => {
+            let query = `INSERT INTO employee SET ?`;
+
+            db.query(query, {
+                first_name: res.first_name,
+                last_name: res.last_name,
+                role_id: res.role,
+                manager_id: res.manager
+            }, (err, res) => {
+                if(err) {
+                    console.error(err);
+                    return;
+                }
+                optionPrompt();
+            });
+        });
+        });
+    });
+}
+
 
 
 
